@@ -24,14 +24,47 @@ def get_urls_to_scrape():
     
     return [f'https://www.filmweb.pl/user/{user}/films' for user in users]
 
+def load_cookie_json(path = ''):
+    with open('cookies.json', 'r') as inputfile:
+        print('cookies loaded')
+        cookies = json.load(inputfile)
+    return cookies
+
 class MovieSpider(scrapy.Spider):
     name = 'movies'
     allowed_domains = ['www.filmweb.pl']
-    
-    start_urls = get_urls_to_scrape()
+
+    def start_requests(self):
+        urls = get_urls_to_scrape()
+
+        # Set up cookie magic
+        # Load cookies from previously created cookie (from json from selenium)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0',
+            'Accept': 'text/css,*/*;q=0.1',
+            'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3'
+            }
+        
+        TRY_LOGIN = True
+
+        if TRY_LOGIN:
+            cookies = load_cookie_json()
+        else:
+            cookies = {}
+
+
+        for url in urls:
+            yield scrapy.Request(
+                url=url, 
+                callback=self.parse, 
+                cookies=cookies,  
+                meta={'dont_merge_cookies': False},
+                headers=headers
+                )
+
         
     def parse(self, response):
-        
+
         user_rating_data = self._parse_user_ratings(response)
         
         xpath_boxes = '//div[@class="myVoteBox "]'
