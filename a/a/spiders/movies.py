@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import scrapy
 import json
+import re
+from const import run_params
 
 class Movie(scrapy.Item):
     movie_title = scrapy.Field()
@@ -22,54 +24,86 @@ def get_users_to_scrape():
 def get_urls_to_scrape():
     users = get_users_to_scrape()
     
-    return [f'https://www.filmweb.pl/user/{user}/films' for user in users]
+    return [f'https://www.filmweb.pl/user/{user}/films?page=1' for user in users]
 
 def load_cookie_json(path = ''):
-    with open('cookies.json', 'r') as inputfile:
-        print('cookies loaded')
-        cookies = json.load(inputfile)
+    try:
+        with open('cookies.json', 'r') as inputfile:
+            print('cookies loaded')
+            cookies = json.load(inputfile)
+    except:
+        cookies = {}
     return cookies
+
+def next_page_url(url):
+    current = int(re.findall(r'\d+$', url)[0])
+    return re.sub(r'\d+$', str(current+1), url)
 
 class MovieSpider(scrapy.Spider):
     name = 'movies'
     allowed_domains = ['www.filmweb.pl']
 
-    def start_requests(self):
-        urls = get_urls_to_scrape()
-
+    def _setup_constants(self):
         # Set up cookie magic
         # Load cookies from previously created cookie (from json from selenium)
-        headers = {
+        self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0',
             'Accept': 'text/css,*/*;q=0.1',
             'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3'
             }
         
-        TRY_LOGIN = True
-
-        if TRY_LOGIN:
-            cookies = load_cookie_json()
+        self.try_login = run_params['try_login']
+        
+        if self.try_login:
+            self.cookies = load_cookie_json()
         else:
-            cookies = {}
+            self.cookies = {}
 
+        self.limit_pages_per_user = run_params['limit_pages_per_user']
+
+    def _check_if_abort(self, current_url):
+        if self.limit_pages_per_user is not None:
+            if_abort = int(re.findall(r'\d+$', current_url)[0]) >= self.limit_pages_per_user
+        else:
+            if_abort = False
+
+        if not self.try_login:
+            if_abort = True
+
+        if if_abort:
+            print('Maximum number of pages per user scraped. Aborting')
+        return if_abort
+
+    
+    def start_requests(self):
+        urls = get_urls_to_scrape()
+
+        self._setup_constants()
 
         for url in urls:
             yield scrapy.Request(
                 url=url, 
                 callback=self.parse, 
-                cookies=cookies,  
+                cookies=self.cookies,  
                 meta={'dont_merge_cookies': False},
-                headers=headers
+                headers=self.headers,
+                cb_kwargs={'current_url': url}
                 )
 
         
-    def parse(self, response):
+    def parse(self, response, current_url):
 
         user_rating_data = self._parse_user_ratings(response)
         
         xpath_boxes = '//div[@class="myVoteBox "]'
         selection = response.xpath(xpath_boxes)
-        
+
+        if len(selection) == 0:
+            empty_page_flag = True
+            print('No movies on this page')
+        else:
+            empty_page_flag = False
+
         xpath_title = './div[@class = "myVoteBox__top"]//h3[@class="filmPreview__title"]/text()' # tytuł
         xpath_year = './div[@class = "myVoteBox__top"]//span[@class="filmPreview__year"]/text()' #rok
         xpath_rating_avg = './div[@class = "myVoteBox__top"]//span[@class="rateBox__rate"]/text()' #ocena
@@ -96,6 +130,20 @@ class MovieSpider(scrapy.Spider):
             movie['user_url']   = response.url
 
             yield movie
+
+        if_abort_user = self._check_if_abort(current_url)
+
+        if not empty_page_flag and not if_abort_user:
+            print('Going to the next page')
+
+            yield scrapy.Request(
+                url=next_page_url(current_url), 
+                callback=self.parse, 
+                cookies=self.cookies,  
+                meta={'dont_merge_cookies': False},
+                headers=self.headers,
+                cb_kwargs={'current_url': next_page_url(current_url)}
+                )
             
             
     def _parse_user_ratings(self, response):

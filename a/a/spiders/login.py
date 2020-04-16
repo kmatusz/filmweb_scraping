@@ -3,6 +3,7 @@ import scrapy
 import json
 from scrapy_selenium import SeleniumRequest
 import time
+from const import run_params
 
 class LoginSpider(scrapy.Spider):
     # This spider is a trick for logging in
@@ -40,11 +41,9 @@ class LoginSpider(scrapy.Spider):
 
         print('Fb loaded')
 
-        # To input credentials from command line run:
-        # scrapy crawl login -a email=mail@google.com -a pwd=MY_PASSWORD
-
-        email = [self.email]
-        pwd = [self.pwd]
+        email = [run_params['email']]
+        pwd = [run_params['pwd']]
+        print(email)
         username = driver.find_element_by_xpath('//input[@id = "email"]')
         username.send_keys(email)
         

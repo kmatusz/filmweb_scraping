@@ -5,9 +5,15 @@ Important files:
 - `a/` - running scrapy scraper
 
 To run scrapy:
+
+1. Add your facebook credentials in file `const.py`
+2. Run from cmd:
+
 ```
 cd a
 rm movies.csv
+scrapy crawl login
+
 scrapy crawl -o movies.csv movies
 ```
 
