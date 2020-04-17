@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# Contains scraper of facebook login page.
+# Created by Kamil Matuszelański
+
 import scrapy
 import json
 from scrapy_selenium import SeleniumRequest
@@ -25,7 +27,6 @@ class LoginSpider(scrapy.Spider):
 
     def start_requests(self):
         # Setup facebook login authentication - redirect to fb page
-
         url = 'https://www.filmweb.pl/fbc/entryPoint?_login_redirect_url=https://www.filmweb.pl/'
 
         yield SeleniumRequest(
@@ -36,14 +37,14 @@ class LoginSpider(scrapy.Spider):
     
         
     def parse(self, response):
-
+        # Function for sending credentials to facebook and logging in
         driver = response.request.meta['driver']
 
         print('Fb loaded')
 
         email = [run_params['email']]
         pwd = [run_params['pwd']]
-        print(email)
+
         username = driver.find_element_by_xpath('//input[@id = "email"]')
         username.send_keys(email)
         
@@ -57,9 +58,8 @@ class LoginSpider(scrapy.Spider):
 
 
         cookies = driver.get_cookies()
-        # print(cookies)
 
-        with open('cookies.json', 'w') as file:
+        with open('data/cookies.json', 'w') as file:
             json.dump(cookies, file)
         print('Cookies saved')
 

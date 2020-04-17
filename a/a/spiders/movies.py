@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# Contains scraping of websites with movies.
+# Created by Kamil Matuszelański
+
 import scrapy
 import json
 import re
@@ -221,7 +223,7 @@ def load_cookie_json():
     # Cookies enable authentication with facebook
 
     try:
-        with open('cookies.json', 'r') as inputfile:
+        with open('data/cookies.json', 'r') as inputfile:
             print('cookies loaded')
             cookies = json.load(inputfile)
     except:
