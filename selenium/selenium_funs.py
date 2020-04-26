@@ -8,7 +8,7 @@ import os
 
 # Scraping movies part - author Kamil Matuszelański
 
-def scrape_users_movies(driver, users, dump_to_csv = True, path = 'movies.csv'):
+def scrape_users_movies(driver, users, dump_to_csv = True, path = 'data/movies.csv'):
     # Scrape movies ratings for each user in the list
     # optionally save output to csv
     
@@ -65,7 +65,7 @@ def check_if_friend(driver):
     return False
 
 
-def dump_df_to_csv(movies, path = 'movies.csv'):
+def dump_df_to_csv(movies, path = 'data/movies.csv'):
     # save a dataframe to csv 
     # if csv already exists append
     df = pd.DataFrame(movies)
@@ -77,7 +77,7 @@ def dump_df_to_csv(movies, path = 'movies.csv'):
 
 
 
-def remove_csv(path = 'movies.csv'):
+def remove_csv(path = 'data/movies.csv'):
     # remove file if exists
     if os.path.exists(path):
         os.remove(path)
@@ -203,7 +203,7 @@ def click_popups(driver):
 
 # Scraping friends part - author Grzegorz Kowalczyk
 
-def scrape_friends(driver, max_friends = 1, dump_to_csv = False, path= 'friends.csv'):
+def scrape_friends(driver, max_friends = 1, dump_to_csv = True, path= 'data/friends.csv'):
     # main function for scraping friends
     print('running friends part')
     url = 'http://www.filmweb.pl/login'
