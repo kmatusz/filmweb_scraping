@@ -4,6 +4,8 @@ import getpass
 import datetime
 import pandas as pd
 import os
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def connect(url):
@@ -31,7 +33,7 @@ def login(driver):
     # login with filmweb account
     button = driver.find_element_by_xpath('//div[@class="authPage__button authButton authButton--filmweb"]')
     button.click()
-    time.sleep(1)
+    time.sleep(2)
     print("************************\nAfter choosing way of logging in\n*********\n")
 
     # provide credentials
@@ -42,27 +44,29 @@ def login(driver):
 
     password_field = driver.find_element_by_xpath('//input[@name="j_password"]')
     my_pass = getpass.getpass('Please provide your password:')
-
     password_field.send_keys(my_pass)
     time.sleep(1)
 
     # accept the credentials
-    button = driver.find_element_by_xpath(
-        '//button[@class="popupForm__button authButton authButton--submit materialForm__submit"]')
+    button = driver.find_element_by_xpath('//button[@class="popupForm__button authButton authButton--submit materialForm__submit"]')
     button.click()
-
+    time.sleep(1)
     print("************************\nAfter logging in\n*********\n")
 
 
 def skip_ad(driver):
-    button = driver.find_element_by_xpath('//button[@class="ws__skipButton"]')
+    time.sleep(3)
+    try:
+        button = driver.find_element_by_xpath('//button[@class="ws__skipButton"]')
+    except:
+        button = driver.find_element_by_xpath('//button[@class="ws__skipButton ws__skipButton--inactive"]')
     button.click()
     time.sleep(1)
-
     print("************************\nAfter ad:\n*********\n")
 
 
 def get_my_profile_url(driver):
+    time.sleep(3)
     button = driver.find_element_by_id("userHeaderButton")
     button.click()
     time.sleep(1)
@@ -74,14 +78,15 @@ def get_my_profile_url(driver):
 def retrive_friends(driver, url):
     new_url = url + '/friends'
     driver.get(new_url)
-    time.sleep(0.7)
+    time.sleep(1)
 
-    scroll(driver, 0.7)
-    time.sleep(0.7)
+    scroll_to_bottom(driver)
     button = driver.find_elements_by_xpath('//ul[@class="userBoxes__list"]/li')
     friends_set = set(button)
 
-    return [friend.get_attribute("data-user-name") for friend in friends_set]
+    number_friends = (len(friends_set))
+
+    return number_friends, [friend.get_attribute("data-user-name") for friend in friends_set]
 
 
 def get_profile_url(username):
@@ -89,29 +94,31 @@ def get_profile_url(username):
     return profile_url
 
 
-def scroll(driver, timeout):
-    scroll_pause_time = timeout
+def scroll_to_bottom(driver):
 
-    # Get scroll height
-    last_height = driver.execute_script("return document.body.scrollHeight")
+    old_position = 0
+    new_position = None
 
-    while True:
-        # Scroll down to bottom
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-        # Wait to load page
-        time.sleep(scroll_pause_time)
-
-        # Calculate new scroll height and compare with last scroll height
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            # If heights are the same it will exit the function
-            break
-        last_height = new_height
+    while new_position != old_position:
+        # Get old scroll position
+        old_position = driver.execute_script(
+                ("return (window.pageYOffset !== undefined) ?"
+                 " window.pageYOffset : (document.documentElement ||"
+                 " document.body.parentNode || document.body);"))
+        # Sleep and Scroll
+        time.sleep(1)
+        driver.execute_script((
+                "var scrollingElement = (document.scrollingElement ||"
+                " document.body);scrollingElement.scrollTop ="
+                " scrollingElement.scrollHeight;"))
+        # Get new position
+        new_position = driver.execute_script(
+                ("return (window.pageYOffset !== undefined) ?"
+                 " window.pageYOffset : (document.documentElement ||"
+                 " document.body.parentNode || document.body);"))
 
 
 def dump_movies_to_csv(movies, path='friends.csv'):
-
     df = pd.DataFrame(movies)
 
     if os.path.exists(path):
@@ -126,41 +133,59 @@ def remove_csv(path='friends.csv'):
 
 
 def add_usernames(parameter, friends_set, driver):
-    all_friends_set = set()
+    dfObj = pd.DataFrame(columns=['Username', 'Number of friends', 'List of friends'])
     friend_friends = set()
     ffriend_friends = set()
-
-    print("************************\nMy friends\n*********\n")
     for friend in friends_set:
-
-        if (len(all_friends_set) < parameter):
-            all_friends_set.add(friend)
+        if (len(dfObj) < parameter):
             friend_url = get_profile_url(friend)
-            [friend_friends.add(f) for f in retrive_friends(driver, friend_url)]
+            number_of_friends, list_of_friends = retrive_friends(driver, friend_url)
+            friend_df = pd.DataFrame({'Username': friend, 'Number of friends': number_of_friends, 'List of friends': [list_of_friends]})
+            dfObj= dfObj.append(friend_df)
+            for element in list_of_friends:
+                friend_friends.add(element)
         else:
             break
+    print("************************\nMy friends\n*********\n")
 
-    print("************************\nMy friends' friends\n*********\n")
     for guy in list(friend_friends):
-        if (len(all_friends_set) < parameter):
-            all_friends_set.add(guy)
+        if ((not(any(dfObj['Username'] == guy))) and (len(dfObj) < parameter)):
             ffriend_url = get_profile_url(guy)
-            [ffriend_friends.add(f) for f in retrive_friends(driver, ffriend_url)]
+            number_of_friends, list_of_friends = retrive_friends(driver, ffriend_url)
+            friend_df = pd.DataFrame({'Username': guy, 'Number of friends': number_of_friends, 'List of friends': [list_of_friends]})
+            dfObj = dfObj.append(friend_df)
+            for element in list_of_friends:
+                ffriend_friends.add(element)
         else:
             break
+    print("************************\nMy friends' friends\n*********\n")
 
-    print("************************\nMy friends' friends of friends\n*********\n")
-    for guys in list(ffriend_friends):
-        if (len(all_friends_set) < parameter):
-            all_friends_set.add(guys)
+    for guy in list(ffriend_friends):
+        if ((not(any(dfObj['Username'] == guy))) and (len(dfObj) < parameter)):
+            ffriend_url = get_profile_url(guy)
+            number_of_friends, list_of_friends = retrive_friends(driver, ffriend_url)
+            friend_df = pd.DataFrame({'Username': guy, 'Number of friends': number_of_friends, 'List of friends': [list_of_friends]})
+            dfObj = dfObj.append(friend_df)
+            for element in list_of_friends:
+                ffriend_friends.add(element)
         else:
             break
-    return all_friends_set
+    print("************************\nMy friends' friends of friends\n*********\n")
+
+    return dfObj
+
+
+def histogram(data):
+    plt.hist(data, rwidth=0.9, color='#607c8e', label=True)
+    plt.title("Distribution of friends count in the sample")
+    plt.xlabel('Number of friends')
+    plt.ylabel('Number of users')
+    plt.show()
 
 
 def main():
     url = 'http://www.filmweb.pl/login'
-    parameter = 1000
+    parameter = 100
 
     driver = connect(url)
     accept_RODO(driver)
@@ -169,13 +194,15 @@ def main():
         skip_ad(driver)
     profile_url = get_my_profile_url(driver)
 
-    friends_set = set(retrive_friends(driver, profile_url))
-    all_friends_set = add_usernames(parameter, friends_set, driver)
-
+    my_friends_set = set(retrive_friends(driver, profile_url)[1])
+    all_friends_df = add_usernames(parameter, my_friends_set, driver)
+    print(all_friends_df)
     remove_csv()
-    dump_movies_to_csv(all_friends_set)
+    dump_movies_to_csv(all_friends_df)
+    histogram(all_friends_df.loc[:, 'Number of friends'])
     time.sleep(3)
     driver.quit()
+
 
 if __name__ == "__main__":
     main()
