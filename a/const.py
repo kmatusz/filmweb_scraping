@@ -4,7 +4,7 @@
 
 run_params = {
     # Facebook credentials
-    'email': 'xxxxxx',
+    'email': 'xxxx',
     'pwd': 'xxxxx',
     # If run scraper logged in. 
     # If this is disabled, only 30 movies per user are fetched 
@@ -12,5 +12,5 @@ run_params = {
     # Limit pages scrpaed per user.
     # Each page has  30 movies.
     'limit_pages_per_user': None,
-    'limit_users_to_scrape': None
+    'limit_users_to_scrape': 100
 }

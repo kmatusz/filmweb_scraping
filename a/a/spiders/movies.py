@@ -5,6 +5,7 @@ import scrapy
 import json
 import re
 from const import run_params
+import pandas as pd
     
 class MovieSpider(scrapy.Spider):
     # Scrape movies from consecutive users
@@ -203,8 +204,9 @@ def get_users_to_scrape(limit_users_to_scrape = None):
     # Obtain file with friends output
     # Limit users to scrape can be set up from file const.py
 
-    with open('data/friends.csv', 'r') as file:
-        users = [i.rstrip() for i in file.readlines()]
+    # with open('data/friends.csv', 'r') as file:
+    #     users = [i.rstrip() for i in file.readlines()]
+    users = list(pd.read_csv('data/friends.csv', usecols = [1]).drop_duplicates().user.values)
 
     if limit_users_to_scrape is not None:
         return users[:limit_users_to_scrape]

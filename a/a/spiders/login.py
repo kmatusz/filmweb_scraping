@@ -63,7 +63,7 @@ class LoginSpider(scrapy.Spider):
             file.write(my_profile_url)
         print('Cookies saved')        
 
-
+        # Get and save cookies
         cookies = driver.get_cookies()
 
         with open('data/cookies.json', 'w') as file:
