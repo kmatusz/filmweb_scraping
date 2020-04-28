@@ -56,6 +56,13 @@ class LoginSpider(scrapy.Spider):
     
         print('Logged in')
 
+        # get and save profile url
+        my_profile_url = get_my_profile_url(driver)
+        print(my_profile_url)
+        with open('data/my_profile_url.txt', 'w') as file:
+            file.write(my_profile_url)
+        print('Cookies saved')        
+
 
         cookies = driver.get_cookies()
 
@@ -65,3 +72,16 @@ class LoginSpider(scrapy.Spider):
 
         yield None
 
+
+
+def get_my_profile_url(driver):
+    time.sleep(3)
+    try:
+        button = driver.find_element_by_id("userHeaderButton")
+        button.click()
+        time.sleep(1)
+        return driver.current_url
+    except:
+        print('not logged in')
+        print('returning random user url')
+        return 'https://www.filmweb.pl/user/Kamilmac'
