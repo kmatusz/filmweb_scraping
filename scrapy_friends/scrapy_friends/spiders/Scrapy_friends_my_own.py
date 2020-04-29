@@ -11,7 +11,7 @@ class MovieSpider(scrapy.Spider):
     allowed_domains = ['www.filmweb.pl']
     start_urls = ['http://www.filmweb.pl/user/Dr_Marvel/friends']
 
-    #getting friends of your own, links to their friends, which will be helpful in next level of friends (iteration)
+    #getting friends of your own (link in which is possible to see their friends, what will be helpful in next iteration)
     def parse(self, response):
         xpath_friends = '//ul[re:test(@class, "userBoxes__list")]//li//@data-user-name'
         selection = response.xpath(xpath_friends)
